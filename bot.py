@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 import re
@@ -14,6 +15,7 @@ from openai import AsyncOpenAI, AuthenticationError, RateLimitError
 from telegram import Update
 from telegram.constants import ChatType
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.request import HTTPXRequest
 
 load_dotenv()
 TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
@@ -29,6 +31,24 @@ recent_requests = deque()
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('httpx').setLevel(logging.WARNING)
 log = logging.getLogger(__name__)
+
+
+class ReplyDiagnosticRequest(HTTPXRequest):
+    async def do_request(self, url, method, **kwargs):
+        status, payload = await super().do_request(url=url, method=method, **kwargs)
+        if url.rsplit('/', 1)[-1].lower() == 'getupdates' and status == 200:
+            try:
+                data = json.loads(payload)
+                for update in data.get('result', []):
+                    message = update.get('message') or update.get('edited_message') or {}
+                    text = message.get('text', '').strip().lower()
+                    if text.startswith('/translate') or text == 'translate':
+                        log.info('Raw translation metadata: keys=%s thread=%s topic=%s reply=%s quote=%s external=%s',
+                                 sorted(message.keys()), message.get('message_thread_id'), message.get('is_topic_message', False),
+                                 'reply_to_message' in message, 'quote' in message, 'external_reply' in message)
+            except (ValueError, TypeError, AttributeError):
+                log.warning('Unable to inspect translation metadata')
+        return status, payload
 
 
 @contextmanager
@@ -394,10 +414,40 @@ async def help_command(update, context):
     await update.effective_message.reply_text('Catch up (group admins):\n/summary — recent messages\n/summary 100 — last 100\n/summary hindi — catch up in Hindi\n/today — today’s messages\n/decisions — what was decided\n/actions — who’s doing what\n\nTranslate (everyone):\nReply with translate or /translate for English.\nReply with /translate Hindi for another language.\nOr paste text: /translate yeh kya scene hai\nFor another language: /translate Hindi -- your text\nHinglish and Hindi written in English letters are supported.')
 
 
+async def startup_diagnostics(app):
+    if os.getenv('CHECK_TRANSLATION') != '1':
+        return
+    try:
+        me = await app.bot.get_me()
+        with connection() as con:
+            row = con.execute('SELECT chat_id FROM messages ORDER BY timestamp DESC LIMIT 1').fetchone()
+        if row:
+            chat = await app.bot.get_chat(row[0])
+            membership = await app.bot.get_chat_member(row[0], me.id)
+            log.info('Telegram reply diagnostic: type=%s admin_status=%s history_visible=%s forum=%s privacy_disabled=%s',
+                     chat.type, membership.status, getattr(chat, 'has_visible_history', None),
+                     getattr(chat, 'is_forum', None), me.can_read_all_group_messages)
+        else:
+            log.info('Telegram reply diagnostic: no stored group available')
+    except Exception as exc:
+        log.warning('Telegram reply diagnostic failed: %s', type(exc).__name__)
+    try:
+        # Fictional text only: tests the live key/model without posting to a group.
+        result = await ai(translation_instructions('bhai abhi book mat kar, kal confirm karte hain'),
+                          'Target language: English\nMessage to translate:\nbhai abhi book mat kar, kal confirm karte hain')
+        log.info('Groq translation self-test passed: model=%s output=%r', MODEL, result[:400])
+    except Exception as exc:
+        body = getattr(exc, 'body', None)
+        code = body.get('code') if isinstance(body, dict) else None
+        log.warning('Groq translation self-test failed: type=%s status=%s code=%s',
+                    type(exc).__name__, getattr(exc, 'status_code', None), code)
+
+
 def main():
     with connection():
         pass
-    app = Application.builder().token(TOKEN).concurrent_updates(8).build()
+    app = (Application.builder().token(TOKEN).concurrent_updates(8)
+           .get_updates_request(ReplyDiagnosticRequest()).post_init(startup_diagnostics).build())
     for name, handler in [('summary',summary),('today',today),('decisions',decisions),('actions',actions),('translate',translate_reply),('help',help_command),('start',help_command)]:
         app.add_handler(CommandHandler(name, handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Regex(r'(?i)^translate(?:\s+(?:to\s+)?[^\n]{1,60})?\s*$'), translate_reply))
