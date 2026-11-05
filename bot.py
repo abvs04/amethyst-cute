@@ -326,33 +326,44 @@ def reply_source(message, chat_id):
     return source, original_id, has_reply
 
 
+def translation_request(message, chat_id):
+    source, original_id, has_reply = reply_source(message, chat_id)
+    parts = (getattr(message, 'text', '') or '').strip().split(maxsplit=1)
+    request = parts[1].strip() if len(parts) > 1 else ''
+    target = request
+    if not source:
+        if '--' in request:
+            target, source = request.split('--', 1)
+            source = source.strip() or None
+        elif request and request.casefold() not in {
+            'english', 'hindi', 'roman hindi', 'hinglish', 'punjabi', 'urdu', 'spanish',
+            'french', 'german', 'arabic', 'bengali', 'tamil', 'telugu', 'en', 'hi',
+        } and not request.lower().startswith('to '):
+            source, target = request, 'English'
+    target = target.strip()
+    if target.lower().startswith('to '):
+        target = target[3:].strip()
+    return source, target[:60] or 'English', original_id, has_reply
+
+
 async def translate_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.effective_message
     if message is None:
         return
     chat = getattr(update, 'effective_chat', None)
     chat_id = getattr(chat, 'id', None)
-    source, original_id, has_reply = reply_source(message, chat_id)
+    source, target, original_id, has_reply = translation_request(message, chat_id)
     if not source:
-        log.info('Translation source unavailable: reply=%s quote=%s external=%s',
+        log.info('Translation source unavailable: reply=%s quote=%s external=%s fields=%s',
                  getattr(message, 'reply_to_message', None) is not None,
                  getattr(message, 'quote', None) is not None,
-                 getattr(message, 'external_reply', None) is not None)
-        if has_reply:
-            await message.reply_text('I can see your reply, but the original text isn’t available. Quote the text you want translated and try again.')
-        else:
-            await message.reply_text('Reply to a text message with translate. For another language, use translate to Hindi.')
+                 getattr(message, 'external_reply', None) is not None,
+                 sorted(message.to_dict().keys()))
+        await message.reply_text('I didn’t receive the original text. Try selecting a quote, or paste it after /translate, like:\n/translate yeh kya scene hai')
         return
     if client is None:
         await message.reply_text('Translations aren’t available yet. Please contact the group admin.')
         return
-    if message.text.startswith('/'):
-        target = ' '.join(context.args or [])
-    else:
-        target = message.text.strip()[len('translate'):].strip()
-    if target.lower().startswith('to '):
-        target = target[3:].strip()
-    target = target[:60] or 'English'
     system = translation_instructions(source)
     try:
         nearby = translation_context(chat_id, original_id)
@@ -380,7 +391,7 @@ async def translate_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def help_command(update, context):
-    await update.effective_message.reply_text('Catch up (group admins):\n/summary — recent messages\n/summary 100 — last 100\n/summary hindi — catch up in Hindi\n/today — today’s messages\n/decisions — what was decided\n/actions — who’s doing what\n\nTranslate (everyone):\nReply to a message with translate or /translate for English.\nUse translate to Hindi or /translate Hindi for another language.\nHinglish and Hindi written in English letters are supported.')
+    await update.effective_message.reply_text('Catch up (group admins):\n/summary — recent messages\n/summary 100 — last 100\n/summary hindi — catch up in Hindi\n/today — today’s messages\n/decisions — what was decided\n/actions — who’s doing what\n\nTranslate (everyone):\nReply with translate or /translate for English.\nReply with /translate Hindi for another language.\nOr paste text: /translate yeh kya scene hai\nFor another language: /translate Hindi -- your text\nHinglish and Hindi written in English letters are supported.')
 
 
 def main():
