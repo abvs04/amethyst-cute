@@ -289,6 +289,10 @@ def translation_instructions(source):
               '"bc kya mast goal tha" -> "What a fucking great goal!"; '
               '"chutiya mat bana" -> "Don’t bullshit me."; '
               '"mujhe bc itni hasi aa rahi hai" -> "I’m laughing so fucking hard."; '
+              'When someone is addressing another person: "Toh bc complaint khud kar raha tha biceps ki" -> '
+              '"So, motherfucker, you were the one complaining about the biceps." '
+              'Here bc is directed abuse and khud emphasizes that the addressee did it themselves; preserve both. '
+              'Do not apply this pronoun or insult mechanically: in other contexts bc is an exclamation or intensifier, and khud may refer to another subject. '
               '"kal aaunga, abhi mat kar" -> "I’ll come tomorrow; don’t do it yet.". ')
     hints = [hint for pattern, hint in SLANG_HINTS if re.search(pattern, source, flags=re.IGNORECASE)]
     return system + (' Relevant Hindi slang meanings (choose by context): ' + ' '.join(hints) if hints else '')
