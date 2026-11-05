@@ -1,5 +1,13 @@
 # Multilingual Telegram Group Summarizer — history + live updates
 
+## Groq free-tier setup
+
+Create a Groq account at https://console.groq.com and an API key. Stay on the Free plan. Set `AI_PROVIDER=groq`, `GROQ_API_KEY`, and `GROQ_MODEL=openai/gpt-oss-20b` in Railway Variables or your local `.env`. No OpenAI key is needed in Groq mode, and there is no automatic fallback to a paid provider.
+
+The bot splits text into bounded UTF-8 batches, compresses intermediate notes, and paces requests for an 8,000-token-per-minute budget. Large summaries can take several minutes. Start with `/summary 50`. Account limits may differ, and daily limits still apply. New messages continue to be collected during summaries. Hosting costs are separate from the free AI API.
+
+To use OpenAI instead, set `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`.
+
 Summarize the latest 1,000 stored text/caption messages in a Telegram group, across languages and mixed-language conversations. The importer uses an authorized Telegram **user** session to access history; the Telegram **bot** continues collecting future messages. Both write to the same SQLite database, deduplicated by group/message ID.
 
 ## 1. Create and configure the bot
