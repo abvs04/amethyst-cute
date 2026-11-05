@@ -8,6 +8,12 @@ The bot splits text into bounded UTF-8 batches, compresses intermediate notes, a
 
 To use OpenAI instead, set `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`.
 
+## Reply translations
+
+Anyone can reply to a text message or media caption with `translate` or `/translate` for English. Use `translate to Hindi` or `/translate Hindi` for another language, including `Roman Hindi`. Translation understands casual Romanized Hindi, Hinglish, slang, spelling variations and mixed-language messages. Ambiguous wording can still require context.
+
+Summaries use short natural paragraphs or compact bullets, without titles, emoji headers, provider details or plan notices. They preserve the important names, dates, decisions and unresolved points.
+
 Summarize the latest 1,000 stored text/caption messages in a Telegram group, across languages and mixed-language conversations. The importer uses an authorized Telegram **user** session to access history; the Telegram **bot** continues collecting future messages. Both write to the same SQLite database, deduplicated by group/message ID.
 
 ## 1. Create and configure the bot
