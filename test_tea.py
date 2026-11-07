@@ -43,6 +43,22 @@ class Tea(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(launch.call_args.args[2], job)
             message.reply_text.assert_awaited_once_with('Reading the tea…')
 
+    async def test_long_tea_reserves_final_prompt_budget(self):
+        rows = [(i, 'Mira', 'chat detail ' * 24) for i in range(1000)]
+        final_calls = []
+        async def ai(system, content, **kwargs):
+            limit = kwargs.get('max_output_tokens', 2048)
+            self.assertLessEqual(len((system + content).encode()) + limit + 256, 8000)
+            if 'Give the group tea' in system:
+                final_calls.append(content)
+                return 'Dinner is still on.'
+            if 'Compress these' in system:
+                return 'Mira corrected the rumour: dinner is still on.'
+            return 'Mira clarified dinner is still on. ' * 12
+        with patch.object(bot, 'ai', ai):
+            self.assertEqual(await bot.summarize(rows, mode='tea'), 'Dinner is still on.')
+        self.assertEqual(len(final_calls), 1)
+
     async def test_tea_handler_keeps_summary_permission_check(self):
         with patch.object(bot, 'allowed', AsyncMock(return_value=False)) as allowed, patch.object(bot, '_run_summary', AsyncMock()) as run:
             await bot.tea(NS(), NS())

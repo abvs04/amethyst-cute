@@ -302,18 +302,6 @@ async def summarize(rows, mode='summary', language=None, progress=None):
                               f'Chunk {i}/{len(parts)} of chronological chat messages:\n{part}', max_output_tokens=1024))
         if progress:
             await progress(f'Reading the conversation… {i}/{len(parts)} sections covered.')
-    # Reduce notes in bounded batches; never send all 1,000 messages in one request.
-    for _ in range(10):
-        merged = '\n\n'.join(notes)
-        batches = chunks([merged], max_chars=CHUNK_CHARS)
-        if len(batches) == 1:
-            break
-        reduced = [await ai(system + reduction_instruction, batch, max_output_tokens=1024) for batch in batches]
-        if len('\n\n'.join(reduced).encode('utf-8')) >= len(merged.encode('utf-8')):
-            raise RuntimeError('Summary is too large; request fewer messages')
-        notes = reduced
-    else:
-        raise RuntimeError('Summary is too large; request fewer messages')
     if mode == 'tea':
         instruction = ('Give the group tea: a sharp, playful catch-up on what actually unfolded. '
                        'Lead with the most interesting supported exchange, explain who said what, '
@@ -339,9 +327,26 @@ async def summarize(rows, mode='summary', language=None, progress=None):
              'Avoid stock phrases like "Here is a summary", "Key takeaways", "The discussion revolved around", "Overall" and "In conclusion". '
              'Do not mention AI, providers, plans, tokens, tiers, message counts or the summarization process. '
              'Do not invent a personal role or imply you participated in the chat. ')
+    # Reduce notes in bounded batches; never send all 1,000 messages in one request.
+    final_system = system + lang + ' ' + instruction + style
+    # Reserve the actual final prompt/output budget, including numbered note headers.
+    final_budget = min(CHUNK_CHARS, 8000 - 2048 - 256 - len(final_system.encode()) - 512) if PROVIDER == 'groq' else CHUNK_CHARS
+    if final_budget < 100:
+        raise ValueError('Summary instructions exceed the request budget')
+    for _ in range(10):
+        merged = '\n\n'.join(notes)
+        batches = chunks([merged], max_chars=final_budget)
+        if len(batches) == 1:
+            break
+        reduced = [await ai(system + reduction_instruction, batch, max_output_tokens=1024) for batch in batches]
+        if len('\n\n'.join(reduced).encode('utf-8')) >= len(merged.encode('utf-8')):
+            raise RuntimeError('Summary is too large; request fewer messages')
+        notes = reduced
+    else:
+        raise RuntimeError('Summary is too large; request fewer messages')
     if progress:
         await progress('Putting the catch-up together…')
-    return await ai(system + lang + ' ' + instruction + style,
+    return await ai(final_system,
                     f'Based on {len(rows)} stored group messages, these are chronological chunk notes:\n\n' + '\n\n'.join(f'Chunk {i}:\n{note}' for i,note in enumerate(notes,1)))
 
 
