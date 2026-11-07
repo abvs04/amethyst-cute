@@ -15,7 +15,7 @@ Never infer real criminal conduct, a person's caste or a family relationship fro
 
 EXTRA_SLANG_HINTS = [
     (r'\bdall(?:a|e|ey|on)?\b|\bdalaa?l\b|दल्ला|दल्ले|दलाल',
-     'dalla/dalle/dalal: pimp literally; an insulting address, or sellout/lackey in context. Dalal can also mean a neutral broker/agent. Do not invent trafficking. DALL-E is an AI product, not abuse.'),
+     'dalla/dalle/dalal: pimp literally; an insulting address, or sellout/lackey in context. In Hindi addresses such as abe dalle, translate the insult (for example asshole in casual banter), do not leave Dalle as a name unless context establishes an actual name. Dalal can also mean a neutral broker/agent. Do not invent trafficking. DALL-E is an AI product, not abuse.'),
     (r'\bbha?d(?:wa|va|ua|we|ve|ue|wo|vo)\b|भड़व[ाे]',
      'bhadwa/bhadve/bhadua: pimp or a contemptuous vulgar insult such as bastard; preserve the intended insult rather than inventing a literal occupation.'),
     (r'\b(?:hara+m(?:i|za+da|ja+da|za+de|ja+de)|hara+m[kx]hor)\b|हरामी|हरामखोर|हरामज़ाद',
