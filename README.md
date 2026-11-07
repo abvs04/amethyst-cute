@@ -4,13 +4,17 @@
 
 Create a Groq account at https://console.groq.com and an API key. Stay on the Free plan. Set `AI_PROVIDER=groq`, `GROQ_API_KEY`, and `GROQ_MODEL=openai/gpt-oss-20b` in Railway Variables or your local `.env`. No OpenAI key is needed in Groq mode, and there is no automatic fallback to a paid provider.
 
-The bot splits text into bounded UTF-8 batches and compresses intermediate notes. Translations have separate request slots from summaries, a smaller output budget for short text, and a 10-minute cache for repeated requests in the same group. There is no fixed delay between translations; backoff follows actual provider rate-limit responses. Large summaries can still take several minutes. Start with `/summary 50`. Account limits and daily limits apply. New messages continue to be collected during summaries. Hosting costs are separate from the free AI API.
+The bot splits text into bounded UTF-8 batches and compresses intermediate notes. A summary saves its message snapshot and each completed step in SQLite. Temporary limits trigger background waits and retries; restarts automatically resume unfinished jobs. A paused job resumes with the same `/summary` request. Progress replaces one status message, and the completed catch-up replaces that status. Full summaries can take several minutes; daily limits may cause a longer pause with saved progress.
+
+Translations keep separate request slots, a smaller output budget for short text, and a 10-minute cache for repeated requests in the same group. Summary pacing leaves headroom for translations. New messages continue to be collected during summaries. Hosting costs are separate from the free AI API.
 
 To use OpenAI instead, set `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`.
 
 ## Reply translations
 
 Anyone can reply to a text message or media caption with `translate` or `/translate` for English. Use `translate to Hindi` or `/translate Hindi` for another language, including `Roman Hindi`. Translation understands casual Romanized Hindi, Hinglish, slang, spelling variations and mixed-language messages. Ambiguous wording can still require context.
+
+`hindi_slang.py` expands contextual spelling families including dalle/dalal, bhadwa, nalla, fattu, harami, tharki, chapri, lafda, jhaatu, aand and many others. Meanings are paraphrased and selected from sentence context. It distinguishes ordinary names, occupations and words in other languages from abuse; this is not an exhaustive import of Urban Dictionary. Only matched hints are sent to the model, within a bounded request budget.
 
 Summaries use short natural paragraphs or compact bullets, without titles, emoji headers, provider details or plan notices. They preserve the important names, dates, decisions and unresolved points.
 
