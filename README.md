@@ -4,13 +4,17 @@
 
 Create a Groq account at https://console.groq.com and an API key. Stay on the Free plan. Set `AI_PROVIDER=groq`, `GROQ_API_KEY`, and `GROQ_MODEL=openai/gpt-oss-20b` in Railway Variables or your local `.env`. No OpenAI key is needed in Groq mode, and there is no automatic fallback to a paid provider.
 
-The bot splits text into bounded UTF-8 batches and compresses intermediate notes. Translations have separate request slots from summaries, a smaller output budget for short text, and a 10-minute cache for repeated requests in the same group. There is no fixed delay between translations; backoff follows actual provider rate-limit responses. Large summaries can still take several minutes. Start with `/summary 50`. Account limits and daily limits apply. New messages continue to be collected during summaries. Hosting costs are separate from the free AI API.
+The bot splits text into bounded UTF-8 batches and compresses intermediate notes. A summary saves its message snapshot and each completed step in SQLite. Temporary limits trigger background waits and retries; restarts automatically resume unfinished jobs. A paused job resumes with the same `/summary` request. Progress replaces one status message, and the completed catch-up replaces that status. Full summaries can take several minutes; daily limits may cause a longer pause with saved progress.
+
+Translations keep separate request slots, a smaller output budget for short text, and a 10-minute cache for repeated requests in the same group. Summary pacing leaves headroom for translations. New messages continue to be collected during summaries. Hosting costs are separate from the free AI API.
 
 To use OpenAI instead, set `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL`.
 
 ## Reply translations
 
 Anyone can reply to a text message or media caption with `translate` or `/translate` for English. Use `translate to Hindi` or `/translate Hindi` for another language, including `Roman Hindi`. Translation understands casual Romanized Hindi, Hinglish, slang, spelling variations and mixed-language messages. Ambiguous wording can still require context.
+
+`hindi_slang.py` expands contextual spelling families including dalle/dalal, bhadwa, nalla, fattu, harami, tharki, chapri, lafda, jhaatu, aand and many others. Meanings are paraphrased and selected from sentence context. It distinguishes ordinary names, occupations and words in other languages from abuse; this is not an exhaustive import of Urban Dictionary. Only matched hints are sent to the model, within a bounded request budget.
 
 Summaries use short natural paragraphs or compact bullets, without titles, emoji headers, provider details or plan notices. They preserve the important names, dates, decisions and unresolved points.
 
@@ -76,3 +80,17 @@ Keep the bot process running on your computer or an always-on server. The bot mu
 - Deleted Telegram messages are not automatically deleted from the local database. To erase stored data, stop the bot and delete the SQLite database and its WAL/SHM files. The latest 1,000 stored messages per group are retained.
 - Summaries send stored chat text to the configured AI API. Respect group consent, Telegram terms, and applicable privacy requirements.
 - OpenAI API calls incur usage costs. No cloud hosting or production deployment is included.
+
+## Translate several messages
+
+Use `/translate 5` in a group for the last five saved text messages/captions, oldest first with sender names. Reply with `/translate 5` to end the selection at that message. `/translate 5 Hindi` changes the target language; English is the default. Supports 1–20 messages and reports when fewer are available. Short batches use one validated model request; long or malformed batches fall back to bounded individual translations. Existing reply and pasted-text translation still work.
+
+## Group tea
+
+Group admins can use `/tea` (case-insensitive, including `/Tea`) for a concise, plain recap of the latest 100 stored messages. `/tea 50` changes the count (1–1,000), and `/tea 50 English` selects a language. It explains supported exchanges, speakers, banter, disagreements and outcomes without inventing drama or inferring relationships. Rumours keep their attribution and any later correction; quiet chats get a brief honest response. Uses the same persisted jobs, rate-limit recovery and admin permissions as summaries.
+
+Recaps select the latest requested messages strictly before the command message, then read oldest to newest using Telegram message IDs. Output topics follow their first appearance, with replies and outcomes attached. New messages arriving during processing are excluded. Tea describes exchanges directly, without a gossip narrator or forced humour.
+
+## Who said this?
+
+Everyone can use `/whosaidthis` in a group. A native Telegram quiz shows an exact saved quote with 3–4 author-name choices. The answer appears after your guess; voting closes automatically after 45 seconds, even if the bot restarts. One round per minute per group, with the last 20 quotes excluded. Quotes must be at least 10 minutes old, 20–220 characters, and contain at least four words. Links, mentions, long digit strings, commands and text attributed to multiple names are skipped. Requires three distinct saved author names. Names are the display names stored when messages were received. No AI calls are needed.
