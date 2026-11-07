@@ -84,3 +84,7 @@ Keep the bot process running on your computer or an always-on server. The bot mu
 ## Translate several messages
 
 Use `/translate 5` in a group for the last five saved text messages/captions, oldest first with sender names. Reply with `/translate 5` to end the selection at that message. `/translate 5 Hindi` changes the target language; English is the default. Supports 1–20 messages and reports when fewer are available. Short batches use one validated model request; long or malformed batches fall back to bounded individual translations. Existing reply and pasted-text translation still work.
+
+## Group tea
+
+Group admins can use `/tea` (case-insensitive, including `/Tea`) for a concise, playful recap of the latest 100 stored messages. `/tea 50` changes the count (1–1,000), and `/tea 50 English` selects a language. It explains supported exchanges, speakers, banter, disagreements and outcomes without inventing drama or inferring relationships. Rumours keep their attribution and any later correction; quiet chats get a brief honest response. Uses the same persisted jobs, rate-limit recovery and admin permissions as summaries.
