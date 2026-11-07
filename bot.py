@@ -21,6 +21,7 @@ from telegram.constants import ChatType
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 from telegram.request import HTTPXRequest
 from hindi_slang import EXTRA_SLANG_HINTS
+from who_said import start_game
 
 load_dotenv()
 TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
@@ -815,8 +816,16 @@ async def translate_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await message.reply_text('Couldn’t translate that message. Please try again.')
 
 
+async def whosaidthis(update, context):
+    try:
+        await start_game(update, context, connection)
+    except Exception:
+        log.exception('Who said this round failed')
+        await update.effective_message.reply_text('Couldn’t start the round. Please try again.')
+
+
 async def help_command(update, context):
-    await update.effective_message.reply_text('Catch up (group admins):\n/summary — recent messages\n/summary 100 — last 100\n/summary hindi — catch up in Hindi\n/tea — the latest group tea (100 messages)\n/tea 50 English — tea from 50 messages in English\n/today — today’s messages\n/decisions — what was decided\n/actions — who’s doing what\n\nTranslate (everyone):\nReply with translate or /translate for English.\nReply with /translate Hindi for another language.\n/translate 5 — translate the last five messages\n/translate 5 Hindi — translate them into Hindi\nReply with /translate 5 to end at that message.\nChoose 1–20 messages per request.\nOr paste text: /translate yeh kya scene hai\nFor another language: /translate Hindi -- your text\nHinglish and Hindi written in English letters are supported.')
+    await update.effective_message.reply_text('Games (everyone):\n/whosaidthis — guess who wrote an older message; 45 seconds to vote. The answer appears after your guess.\n\nCatch up (group admins):\n/summary — recent messages\n/summary 100 — last 100\n/summary hindi — catch up in Hindi\n/tea — the latest group tea (100 messages)\n/tea 50 English — tea from 50 messages in English\n/today — today’s messages\n/decisions — what was decided\n/actions — who’s doing what\n\nTranslate (everyone):\nReply with translate or /translate for English.\nReply with /translate Hindi for another language.\n/translate 5 — translate the last five messages\n/translate 5 Hindi — translate them into Hindi\nReply with /translate 5 to end at that message.\nChoose 1–20 messages per request.\nOr paste text: /translate yeh kya scene hai\nFor another language: /translate Hindi -- your text\nHinglish and Hindi written in English letters are supported.')
 
 
 async def startup_diagnostics(app):
@@ -925,7 +934,7 @@ def main():
     app = (Application.builder().token(TOKEN).concurrent_updates(8)
            .get_updates_request(ReplyDiagnosticRequest()).post_init(startup_diagnostics)
            .post_stop(stop_summary_jobs).build())
-    for name, handler in [('summary',summary),('tea',tea),('today',today),('decisions',decisions),('actions',actions),('translate',translate_reply),('help',help_command),('start',help_command)]:
+    for name, handler in [('whosaidthis',whosaidthis),('summary',summary),('tea',tea),('today',today),('decisions',decisions),('actions',actions),('translate',translate_reply),('help',help_command),('start',help_command)]:
         app.add_handler(CommandHandler(name, handler, block=False))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Regex(r'(?i)^(?:translate(?:\s+(?:to\s+)?[^\n]{1,60})?|/\s+translate\s+\d+(?:\s+[^\n]{1,60})?)\s*$'), translate_reply, block=False))
     app.add_handler(MessageHandler(filters.ChatType.GROUPS & (filters.TEXT | filters.CAPTION) & ~filters.COMMAND, record))
