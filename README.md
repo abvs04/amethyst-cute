@@ -87,4 +87,6 @@ Use `/translate 5` in a group for the last five saved text messages/captions, ol
 
 ## Group tea
 
-Group admins can use `/tea` (case-insensitive, including `/Tea`) for a concise, playful recap of the latest 100 stored messages. `/tea 50` changes the count (1–1,000), and `/tea 50 English` selects a language. It explains supported exchanges, speakers, banter, disagreements and outcomes without inventing drama or inferring relationships. Rumours keep their attribution and any later correction; quiet chats get a brief honest response. Uses the same persisted jobs, rate-limit recovery and admin permissions as summaries.
+Group admins can use `/tea` (case-insensitive, including `/Tea`) for a concise, plain recap of the latest 100 stored messages. `/tea 50` changes the count (1–1,000), and `/tea 50 English` selects a language. It explains supported exchanges, speakers, banter, disagreements and outcomes without inventing drama or inferring relationships. Rumours keep their attribution and any later correction; quiet chats get a brief honest response. Uses the same persisted jobs, rate-limit recovery and admin permissions as summaries.
+
+Recaps select the latest requested messages strictly before the command message, then read oldest to newest using Telegram message IDs. Output topics follow their first appearance, with replies and outcomes attached. New messages arriving during processing are excluded. Tea describes exchanges directly, without a gossip narrator or forced humour.

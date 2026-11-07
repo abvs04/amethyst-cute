@@ -22,8 +22,8 @@ class Tea(unittest.IsolatedAsyncioTestCase):
         for system, _ in calls:
             self.assertIn('correction', system.lower())
             self.assertIn('who', system.lower())
-        self.assertIn('Give the group tea', calls[-1][0])
-        self.assertIn('nothing juicy happened', calls[-1][0])
+        self.assertIn('Describe the group exchanges plainly', calls[-1][0])
+        self.assertIn('If little happened', calls[-1][0])
         self.assertIn('Do not infer cheating', calls[-1][0])
         self.assertIn('Write the final answer in English', calls[-1][0])
         self.assertEqual(result, 'Mira misread Dev; he clarified dinner is still on.')
@@ -35,13 +35,13 @@ class Tea(unittest.IsolatedAsyncioTestCase):
             context = NS(args=args, bot=object())
             with patch.object(bot, 'client', object()), patch.object(bot, 'get_messages', return_value=[(1, 'Mira', 'hello')]) as get, patch.object(bot, 'load_summary_job', return_value=None), patch.object(bot, 'save_summary_job') as save, patch.object(bot, 'launch_summary_job') as launch:
                 await bot._run_summary(update, context, mode='tea')
-            get.assert_called_once_with(-1, expected_count, None)
+            get.assert_called_once_with(-1, expected_count, None, before_id=10)
             job = save.call_args.args[1]
             self.assertEqual(job['mode'], 'tea')
             self.assertEqual(job['language'], language)
             self.assertEqual(job['options']['count'], expected_count)
             self.assertEqual(launch.call_args.args[2], job)
-            message.reply_text.assert_awaited_once_with('Reading the tea…')
+            message.reply_text.assert_awaited_once_with('Reading the messages…')
 
     async def test_long_tea_reserves_final_prompt_budget(self):
         rows = [(i, 'Mira', 'chat detail ' * 24) for i in range(1000)]
@@ -49,7 +49,7 @@ class Tea(unittest.IsolatedAsyncioTestCase):
         async def ai(system, content, **kwargs):
             limit = kwargs.get('max_output_tokens', 2048)
             self.assertLessEqual(len((system + content).encode()) + limit + 256, 8000)
-            if 'Give the group tea' in system:
+            if 'Describe the group exchanges plainly' in system:
                 final_calls.append(content)
                 return 'Dinner is still on.'
             if 'Compress these' in system:
