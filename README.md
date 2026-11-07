@@ -80,3 +80,7 @@ Keep the bot process running on your computer or an always-on server. The bot mu
 - Deleted Telegram messages are not automatically deleted from the local database. To erase stored data, stop the bot and delete the SQLite database and its WAL/SHM files. The latest 1,000 stored messages per group are retained.
 - Summaries send stored chat text to the configured AI API. Respect group consent, Telegram terms, and applicable privacy requirements.
 - OpenAI API calls incur usage costs. No cloud hosting or production deployment is included.
+
+## Translate several messages
+
+Use `/translate 5` in a group for the last five saved text messages/captions, oldest first with sender names. Reply with `/translate 5` to end the selection at that message. `/translate 5 Hindi` changes the target language; English is the default. Supports 1–20 messages and reports when fewer are available. Short batches use one validated model request; long or malformed batches fall back to bounded individual translations. Existing reply and pasted-text translation still work.
